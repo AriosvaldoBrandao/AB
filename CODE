@@ -1,0 +1,1794 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using MySql.Data.MySqlClient;
+
+namespace PhoneOfLaborExchangeApp
+{
+    public partial class Form1 : Form
+    {        
+        public string IdE = "";
+        public int EditOn = 0;
+        public int UserMode = 0;
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Cancelbtn_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            
+            EmployerAddFormShowbtn.Visible = false;
+            VacancyAddFormShowbtn.Visible = false;
+            AddTownFormShowbtn.Visible = false;
+            AddVacancyNameFormShowbtn.Visible = false;
+            AddUserFormShowbtn.Visible = false;
+            VacancyOfEmpShowbtn.Visible = false;
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter SDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.listvacancyview", conn);
+                DataTable DATA = new DataTable();
+                SDA.Fill(DATA);
+                MySqlDataAdapter townsDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.townsview", conn);
+                DataTable townsDATA = new DataTable();
+                townsDA.Fill(townsDATA);
+                dataGridView1.DataSource = DATA;
+                dataGridView1.Columns[0].HeaderText = "Вакансия";
+                dataGridView1.Columns[1].HeaderText = "Город";
+                dataGridView1.Columns[2].HeaderText = "Организация";
+                dataGridView1.Columns[3].HeaderText = "Стартовый оклад";
+                dataGridView1.Columns[4].HeaderText = "Телефон";
+                dataGridView1.Columns[5].HeaderText = "Адрес";
+                dataGridView1.Columns[6].HeaderText = "Время собеседования";
+                Townscombo.DataSource = townsDATA;
+                Townscombo.DisplayMember = "NameTown";
+                Townscombo.SelectedIndex = -1;
+                //MessageBox.Show(Townscombo.SelectedText);
+                MySqlCommand cmnd = new MySqlCommand("CountActiveVacancy", conn);
+                cmnd.CommandType = CommandType.StoredProcedure;
+                MySqlParameter prm = new MySqlParameter();
+                prm.ParameterName = "@cntV";
+                prm.MySqlDbType = MySqlDbType.Int32;
+                prm.Size = 20;
+                prm.Direction = ParameterDirection.Output;
+                cmnd.Parameters.Add(prm);
+                //cmnd.Parameters.AddWithValue("cntV", 1);
+                //cmnd.Parameters. = ParameterDirection.Output;
+                var result = cmnd.ExecuteNonQuery();
+                ActiveVacancylbl.Text = cmnd.Parameters["@cntV"].Value.ToString();
+                conn.Close();
+                EditOn = 0;
+                Form ModeForm = new ModeForm();
+                ModeForm.Owner = this;
+                ModeForm.ShowDialog();
+                if (UserMode == -1)
+                    Close();
+                switch (UserMode)
+                {
+                    case -1:
+                        Close();
+                        break;
+                    case 0:
+                        //Вход в систему как администратор
+                        EmployerAddFormShowbtn.Visible = true;
+                        VacancyAddFormShowbtn.Visible = true;
+                        AddTownFormShowbtn.Visible = true;
+                        AddVacancyNameFormShowbtn.Visible = true;
+                        AddUserFormShowbtn.Visible = true;
+                        break;
+                    case 1:
+                        //Вход в систему как сотрудник биржи
+                        EmployerAddFormShowbtn.Visible = true;
+                        VacancyAddFormShowbtn.Visible = true;
+                        break;
+                    case 2:
+                        //Вход в систему как работодатель
+                        VacancytextBox.Visible = false;
+                        Townscombo.Visible = false; 
+                        BeginSalarytextBox.Visible = false; 
+                        EndSalarytextBox.Visible = false;
+                        label2.Visible = false;
+                        label3.Visible = false;
+                        label5.Visible = false;
+                        label6.Visible = false;
+                        ActiveVacancyRunbtn.Visible= false;
+                        FindVacancybtn.Visible = false;
+                        Clearbtn.Visible = false;
+                        VacancyOfEmpShowbtn_Click(sender, e);
+                        break;
+                    case 3:
+                        //Вход в систему как соискатель
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void Runbtn_Click(object sender, EventArgs e)
+        {
+        }
+
+        private void ActiveVacancyRunbtn_Click(object sender, EventArgs e)
+        {
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlCommand cmnd0 = new MySqlCommand("ActiveVacancy", conn);
+                cmnd0.CommandType = CommandType.StoredProcedure;
+                var aVac = cmnd0.ExecuteReader();
+                //MySqlDataAdapter SDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.listvacancyview", conn);
+                DataTable DATA = new DataTable();
+                DATA.Load(aVac);
+                //SDA.Fill(DATA);
+                MySqlDataAdapter townsDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.townsview", conn);
+                DataTable townsDATA = new DataTable();
+                townsDA.Fill(townsDATA);
+                dataGridView1.DataSource = DATA;
+                dataGridView1.Columns[0].HeaderText = "Вакансия";
+                dataGridView1.Columns[1].HeaderText = "Город";
+                dataGridView1.Columns[2].HeaderText = "Организация";
+                dataGridView1.Columns[3].HeaderText = "Стартовый оклад";
+                dataGridView1.Columns[4].HeaderText = "Телефон";
+                dataGridView1.Columns[5].HeaderText = "Адрес";
+                dataGridView1.Columns[6].HeaderText = "Время собеседования";
+                MySqlCommand cmnd = new MySqlCommand("CountActiveVacancy", conn);
+                cmnd.CommandType = CommandType.StoredProcedure;
+                MySqlParameter prm = new MySqlParameter();
+                prm.ParameterName = "@cntV";
+                prm.MySqlDbType = MySqlDbType.Int32;
+                prm.Size = 20;
+                prm.Direction = ParameterDirection.Output;
+                cmnd.Parameters.Add(prm);
+                var result = cmnd.ExecuteNonQuery();
+                ActiveVacancylbl.Text = cmnd.Parameters["@cntV"].Value.ToString();
+                conn.Close();
+              }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void EmployerAddFormShowbtn_Click(object sender, EventArgs e)
+        {
+            EditOn = 1;
+            Form EmploersForm = new EmploersForm();
+            EmploersForm.Owner = this;
+            EmploersForm.ShowDialog();
+        }
+
+        private void VacancyAddFormShowbtn_Click(object sender, EventArgs e)
+        {
+            EditOn = 2;
+            Form EmploersForm = new EmploersForm();
+            EmploersForm.Owner = this;
+            EmploersForm.ShowDialog();
+        }
+
+        private void VacancyOfEmpShowbtn_Click(object sender, EventArgs e)
+        {
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                string StrQuery = "SELECT NameVacancy,NameTown,NameEmployer,StartSalary,CONCAT('8(',PhoneCod,')',Phone) AS Phone,Adress,CONCAT(left(BeginTime,5),' - ',left(EndTime,5)) AS InterviewTime";
+                StrQuery = StrQuery + " FROM listvacancy, vacancy, employers, towns";
+                StrQuery = StrQuery + " WHERE listvacancy.IdV = vacancy.IdV AND listvacancy.IdE = employers.IdE AND employers.IdT = towns.IdT AND listvacancy.IdE=" + IdE;
+                MessageBox.Show(StrQuery);
+                MySqlDataAdapter SDA = new MySqlDataAdapter(StrQuery, conn);
+                DataTable DATA = new DataTable();
+                SDA.Fill(DATA);
+                dataGridView1.DataSource = DATA;
+                dataGridView1.Columns[0].HeaderText = "Вакансия";
+                dataGridView1.Columns[1].HeaderText = "Город";
+                dataGridView1.Columns[2].HeaderText = "Организация";
+                dataGridView1.Columns[3].HeaderText = "Стартовый оклад";
+                dataGridView1.Columns[4].HeaderText = "Телефон";
+                dataGridView1.Columns[5].HeaderText = "Адрес";
+                dataGridView1.Columns[6].HeaderText = "Время собеседования";
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void AddUserFormShowbtn_Click(object sender, EventArgs e)
+        {            
+            Form UsersForm = new UsersForm();
+            UsersForm.Owner = this;
+            UsersForm.ShowDialog();
+        }
+
+        private void FindVacancybtn_Click(object sender, EventArgs e)
+        {
+            string StrQuery = "";
+            if (VacancytextBox.Text != "" && Townscombo.SelectedIndex == -1 && BeginSalarytextBox.Text == "" && EndSalarytextBox.Text == "")
+            {
+                StrQuery = "SELECT * FROM listvacancyview WHERE UPPER(NameVacancy)='" + VacancytextBox.Text.ToUpper() + "'";
+            }
+            else
+            {
+                if (VacancytextBox.Text != "" && Townscombo.SelectedIndex != -1 && BeginSalarytextBox.Text == "" && EndSalarytextBox.Text == "")
+                {
+                    StrQuery = "SELECT NameVacancy,NameTown,NameEmployer,StartSalary,CONCAT('8(',PhoneCod,')',Phone) AS Phone,Adress,CONCAT(left(BeginTime,5),' - ',left(EndTime,5)) AS InterviewTime";
+                    StrQuery = StrQuery + " FROM listvacancy, vacancy, employers, towns";
+                    StrQuery = StrQuery + " WHERE listvacancy.IdV = vacancy.IdV AND listvacancy.IdE = employers.IdE AND employers.IdT = towns.IdT AND NameTown='" + Townscombo.Text+"'";
+                    StrQuery = StrQuery + " AND UPPER(NameVacancy)='" + VacancytextBox.Text.ToUpper() + "'";
+                }
+                else
+                {
+                    if (VacancytextBox.Text != "" && Townscombo.SelectedIndex != -1 && BeginSalarytextBox.Text != "" && EndSalarytextBox.Text == "")
+                    {
+                        StrQuery = "SELECT NameVacancy,NameTown,NameEmployer,StartSalary,CONCAT('8(',PhoneCod,')',Phone) AS Phone,Adress,CONCAT(left(BeginTime,5),' - ',left(EndTime,5)) AS InterviewTime";
+                        StrQuery = StrQuery + " FROM listvacancy, vacancy, employers, towns";
+                        StrQuery = StrQuery + " WHERE listvacancy.IdV = vacancy.IdV AND listvacancy.IdE = employers.IdE AND employers.IdT = towns.IdT AND NameTown='" + Townscombo.Text + "'";
+                        StrQuery = StrQuery + " AND UPPER(NameVacancy)='" + VacancytextBox.Text.ToUpper() + "'";
+                        StrQuery = StrQuery + " AND StartSalary>=" + BeginSalarytextBox.Text;
+                    }
+                    else
+                    {
+                        if (VacancytextBox.Text != "" && Townscombo.SelectedIndex != -1 && BeginSalarytextBox.Text != "" && EndSalarytextBox.Text != "")
+                        {
+                            StrQuery = "SELECT NameVacancy,NameTown,NameEmployer,StartSalary,CONCAT('8(',PhoneCod,')',Phone) AS Phone,Adress,CONCAT(left(BeginTime,5),' - ',left(EndTime,5)) AS InterviewTime";
+                            StrQuery = StrQuery + " FROM listvacancy, vacancy, employers, towns";
+                            StrQuery = StrQuery + " WHERE listvacancy.IdV = vacancy.IdV AND listvacancy.IdE = employers.IdE AND employers.IdT = towns.IdT AND NameTown='" + Townscombo.Text + "'";
+                            StrQuery = StrQuery + " AND UPPER(NameVacancy)='" + VacancytextBox.Text.ToUpper() + "'";
+                            StrQuery = StrQuery + " AND StartSalary>=" + BeginSalarytextBox.Text;
+                            StrQuery = StrQuery + " AND StartSalary<=" + EndSalarytextBox.Text;
+                        }
+                        else
+                        {
+                            if (VacancytextBox.Text != "" && Townscombo.SelectedIndex == -1 && BeginSalarytextBox.Text != "" && EndSalarytextBox.Text == "")
+                            {
+                                StrQuery = "SELECT NameVacancy,NameTown,NameEmployer,StartSalary,CONCAT('8(',PhoneCod,')',Phone) AS Phone,Adress,CONCAT(left(BeginTime,5),' - ',left(EndTime,5)) AS InterviewTime";
+                                StrQuery = StrQuery + " FROM listvacancy, vacancy, employers, towns";
+                                StrQuery = StrQuery + " WHERE listvacancy.IdV = vacancy.IdV AND listvacancy.IdE = employers.IdE AND employers.IdT = towns.IdT";
+                                StrQuery = StrQuery + " AND UPPER(NameVacancy)='" + VacancytextBox.Text.ToUpper() + "'";
+                                StrQuery = StrQuery + " AND StartSalary>=" + BeginSalarytextBox.Text;
+                            }
+                            else
+                            {
+                                if (VacancytextBox.Text != "" && Townscombo.SelectedIndex == -1 && BeginSalarytextBox.Text != "" && EndSalarytextBox.Text != "")
+                                {
+                                    StrQuery = "SELECT NameVacancy,NameTown,NameEmployer,StartSalary,CONCAT('8(',PhoneCod,')',Phone) AS Phone,Adress,CONCAT(left(BeginTime,5),' - ',left(EndTime,5)) AS InterviewTime";
+                                    StrQuery = StrQuery + " FROM listvacancy, vacancy, employers, towns";
+                                    StrQuery = StrQuery + " WHERE listvacancy.IdV = vacancy.IdV AND listvacancy.IdE = employers.IdE AND employers.IdT = towns.IdT";
+                                    StrQuery = StrQuery + " AND UPPER(NameVacancy)='" + VacancytextBox.Text.ToUpper() + "'";
+                                    StrQuery = StrQuery + " AND StartSalary>=" + BeginSalarytextBox.Text;
+                                    StrQuery = StrQuery + " AND StartSalary<=" + EndSalarytextBox.Text;
+                                }
+                                else
+                                {
+                                    MessageBox.Show("Этот запрос не может быть осуществлен!");
+                                    return;
+                                }
+                            }
+
+                        }
+                    }
+
+                }
+            }
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();               
+                MessageBox.Show(StrQuery);
+                MySqlDataAdapter SDA = new MySqlDataAdapter(StrQuery, conn);
+                DataTable DATA = new DataTable();
+                SDA.Fill(DATA);
+                dataGridView1.DataSource = DATA;
+                dataGridView1.Columns[0].HeaderText = "Вакансия";
+                dataGridView1.Columns[1].HeaderText = "Город";
+                dataGridView1.Columns[2].HeaderText = "Организация";
+                dataGridView1.Columns[3].HeaderText = "Стартовый оклад";
+                dataGridView1.Columns[4].HeaderText = "Телефон";
+                dataGridView1.Columns[5].HeaderText = "Адрес";
+                dataGridView1.Columns[6].HeaderText = "Время собеседования";
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void Clearbtn_Click(object sender, EventArgs e)
+        {
+            ActiveVacancyRunbtn_Click(sender, e);
+        }
+
+        private void AddTownFormShowbtn_Click(object sender, EventArgs e)
+        {
+            EditOn = 3;
+            Form EmploersForm = new EmploersForm();
+            EmploersForm.Owner = this;
+            EmploersForm.ShowDialog();
+        }
+
+        private void AddVacancyNameFormShowbtn_Click(object sender, EventArgs e)
+        {
+            EditOn = 4;
+            Form EmploersForm = new EmploersForm();
+            EmploersForm.Owner = this;
+            EmploersForm.ShowDialog();
+        }
+    }
+}
+
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace PhoneOfLaborExchangeApp
+{
+    public partial class ModeForm : Form
+    {
+        public ModeForm()
+        {
+            InitializeComponent();
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+        }
+
+        private void Cancelbtn_Click(object sender, EventArgs e)
+        {
+            Form1 main = this.Owner as Form1;
+            if (main != null)
+            {
+                main.UserMode = -1;
+            }
+            Close();
+        }
+
+        private void Runbtn_Click(object sender, EventArgs e)
+        {
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            conn.Open();
+            // запрос
+
+            string sql = "Select * from UserRoles where Login=@username AND Password=@password";
+            // объект для выполнения SQL-запроса
+
+            MySqlCommand command = new MySqlCommand(sql, conn);
+            command.Parameters.AddWithValue("@username", LogintextBox.Text);
+            command.Parameters.AddWithValue("@password", PasswordtextBox.Text);
+            // выполняем запрос и получаем ответ
+            MySqlDataReader dr = command.ExecuteReader();
+            if (dr.HasRows)
+            {
+                dr.Read();
+                int uRole = Convert.ToInt32(dr.GetValue(3));
+                string uId = "";
+                switch (uRole)
+                {
+                    case 0:
+                        MessageBox.Show("Вы входите в систему как администратор!");
+                        break;
+                    case 1:
+                        MessageBox.Show("Вы входите в систему как сотрудник биржи!");
+                        break;
+                    case 2:
+                        MessageBox.Show("Вы входите в систему как работодатель!");
+                        uId = Convert.ToString(dr.GetValue(4));
+                        break;
+                    case 3:
+                        MessageBox.Show("Вы входите в систему как соискатель!");
+                        break;
+                }
+                conn.Close();
+                Form1 main = this.Owner as Form1;
+                if (main != null)
+                {
+                    main.UserMode = uRole;
+                    main.IdE = uId;
+                }
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show("Неверный пароль!");
+                conn.Close();
+            }
+        }
+
+        private void PasswordtextBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                Runbtn_Click(sender, e);
+            }
+        }
+    }
+}
+
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace PhoneOfLaborExchangeApp
+{
+    public partial class UsersForm : Form
+    {
+        public string ID;
+        public UsersForm()
+        {
+            InitializeComponent();
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter usDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.roles", conn);
+                DataTable usDATA = new DataTable();
+                usDA.Fill(usDATA);
+                RolescomboBox.DataSource = usDATA;
+                RolescomboBox.DisplayMember = "Info";
+                RolescomboBox.ValueMember = "IdR";
+                RolescomboBox.SelectedIndex = -1;
+                MySqlDataAdapter empDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.employers", conn);
+                DataTable empDATA = new DataTable();
+                empDA.Fill(empDATA);
+                EmployerscomboBox.DataSource = empDATA;
+                EmployerscomboBox.DisplayMember = "NameEmployer";
+                EmployerscomboBox.ValueMember = "IdE";
+                EmployerscomboBox.SelectedIndex = -1;
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void FillUsers()
+        {
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter SDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.UserRolesView", conn);
+                DataTable DATA = new DataTable();
+                SDA.Fill(DATA);
+                dataGridViewUsers.DataSource = DATA;
+                dataGridViewUsers.Columns[1].HeaderText = "Логин";
+                dataGridViewUsers.Columns[2].HeaderText = "Пароль";
+                dataGridViewUsers.Columns[3].HeaderText = "Пользовательская роль";
+                dataGridViewUsers.Columns[4].HeaderText = "Работодатель";
+                dataGridViewUsers.Columns[1].Width = 90;
+                dataGridViewUsers.Columns[2].Width = 90;
+                dataGridViewUsers.Columns[3].Width = 110;
+                dataGridViewUsers.Columns[4].Width = 180;
+                dataGridViewUsers.Columns[0].Width = 0;
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void Closebtn_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void UsersForm_Load(object sender, EventArgs e)
+        {
+            FillUsers();
+        }
+
+        private void AddVacancybtn_Click(object sender, EventArgs e)
+        {
+            string SQLStr = "";
+            if (LogintextBox.Text != "" && PasswordtextBox.Text != "" && RolescomboBox.SelectedIndex > -1)
+            {
+                if (Convert.ToInt32(RolescomboBox.SelectedValue) == 2 && EmployerscomboBox.SelectedIndex > -1)
+                {
+                    SQLStr = "INSERT INTO phoneoflaborexchange.userroles (Login, Password,IdR,IdE) VALUES (";
+                    SQLStr = SQLStr + "'" + LogintextBox.Text + "', ";
+                    SQLStr = SQLStr + "'" + PasswordtextBox.Text + "', ";
+                    SQLStr = SQLStr + "'" + Convert.ToInt32(RolescomboBox.SelectedValue).ToString() + "', ";
+                    SQLStr = SQLStr + "'" + Convert.ToInt32(EmployerscomboBox.SelectedValue).ToString() + "')";
+                }
+                else
+                {
+                    SQLStr = "INSERT INTO phoneoflaborexchange.userroles (Login, Password,IdR) VALUES (";
+                    SQLStr = SQLStr + "'" + LogintextBox.Text + "', ";
+                    SQLStr = SQLStr + "'" + PasswordtextBox.Text + "', ";
+                    SQLStr = SQLStr + "'" + Convert.ToInt32(RolescomboBox.SelectedValue).ToString() + "')";
+                }
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MySqlCommand cmnd = new MySqlCommand(SQLStr, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillUsers();
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Должны быть заполнены все поля!");
+            }
+        }
+
+        private void EditVacancybtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewUsers.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewUsers.CurrentRow.Index >= 0)
+            {
+                LogintextBox.Text = dataGridViewUsers.Rows[dataGridViewUsers.CurrentRow.Index].Cells[1].Value.ToString();
+                PasswordtextBox.Text = dataGridViewUsers.Rows[dataGridViewUsers.CurrentRow.Index].Cells[2].Value.ToString();
+                RolescomboBox.Text = dataGridViewUsers.Rows[dataGridViewUsers.CurrentRow.Index].Cells[3].Value.ToString();
+                if (dataGridViewUsers.Rows[dataGridViewUsers.CurrentRow.Index].Cells[4].Value != null)
+                {
+                    EmployerscomboBox.Text = dataGridViewUsers.Rows[dataGridViewUsers.CurrentRow.Index].Cells[4].Value.ToString();
+                }
+            }
+        }
+
+        private void dataGridViewUsers_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewUsers.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewUsers.CurrentRow.Index >= 0)
+            {
+                ID = dataGridViewUsers.Rows[dataGridViewUsers.CurrentRow.Index].Cells[0].Value.ToString();
+            }
+        }
+
+        private void SaveVacancybtn_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show(LogintextBox.Text.Trim() + ", " + PasswordtextBox.Text.Trim() + ", " + RolescomboBox.SelectedIndex.ToString() + ", " + EmployerscomboBox.SelectedIndex.ToString());
+            string SqlText = "UPDATE userroles SET ";
+            if (LogintextBox.Text.Trim() != "" && PasswordtextBox.Text.Trim() != "" && RolescomboBox.SelectedIndex > -1 && Convert.ToInt32(RolescomboBox.SelectedValue) != 2)
+            {
+                MessageBox.Show("Зашли в первую ветвь");
+                SqlText += " Login = '" + LogintextBox.Text.Trim() + "'";
+                SqlText += ", Password = '" + PasswordtextBox.Text.Trim() + "'";
+                SqlText += ", IdR = '" + Convert.ToString(Convert.ToInt32(RolescomboBox.SelectedValue)) + "'";
+                SqlText += " WHERE userroles.IdU = '" + ID + "'";
+            }
+            else
+            {
+                MessageBox.Show("Зашли во вторую ветвь");
+                if (LogintextBox.Text.Trim() != "" && PasswordtextBox.Text.Trim() != "" && RolescomboBox.SelectedIndex > -1 && Convert.ToInt32(RolescomboBox.SelectedValue) == 2 && EmployerscomboBox.SelectedIndex > -1)
+                {
+                    MessageBox.Show("Зашли в третью ветвь");
+                    SqlText += " Login = '" + LogintextBox.Text.Trim() + "'";
+                    SqlText += ", Password = '" + PasswordtextBox.Text.Trim() + "'";
+                    SqlText += ", IdR = '" + Convert.ToString(Convert.ToInt32(RolescomboBox.SelectedValue)) + "'";
+                    SqlText += ", IdE = '" + Convert.ToString(Convert.ToInt32(EmployerscomboBox.SelectedValue)) + "'";
+                    SqlText += " WHERE userroles.IdU = '" + ID + "'";
+                }
+                else
+                {
+                    MessageBox.Show("Нельзя сохранить незаполненную строку!");
+                    return;
+                }
+            }
+                string @strConn = "";
+                    using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                    {
+                        while (sr.Peek() >= 0)
+                        {
+                            strConn = @sr.ReadLine();
+                        }
+                    }
+                    MySqlConnection conn = new MySqlConnection(@strConn);
+                    try
+                    {
+                        conn.Open();
+                        MessageBox.Show(SqlText);
+                        MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                        cmnd.ExecuteNonQuery();
+                        conn.Close();
+                        FillUsers();
+                        LogintextBox.Text = "";
+                        PasswordtextBox.Text = "";
+                        RolescomboBox.SelectedIndex = -1;
+                        EmployerscomboBox.SelectedIndex = -1;
+                    }
+                    catch (Exception ex)
+                    {
+
+                        MessageBox.Show(ex.Message);
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+        }
+
+        private void DelVacancybtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            string SqlText = "DELETE FROM userroles WHERE userroles.IdU = ";
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewUsers.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewUsers.CurrentRow.Index >= 0)
+                if (MessageBox.Show("Вы действительно хотите удалить запись? Это действие нельзя будет отменить", "Удаление записи", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    string @strConn = "";
+                    using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                    {
+                        while (sr.Peek() >= 0)
+                        {
+                            strConn = @sr.ReadLine();
+                        }
+                    }
+                    MySqlConnection conn = new MySqlConnection(@strConn);
+                    try
+                    {
+                        SqlText += ID;
+                        conn.Open();
+                        MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                        cmnd.ExecuteNonQuery();
+                        conn.Close();
+                        FillUsers();
+                    }
+                    catch (Exception ex)
+                    {
+
+                        MessageBox.Show(ex.Message);
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+        }
+    }
+}
+
+using MySql.Data.MySqlClient;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace PhoneOfLaborExchangeApp
+{
+    public partial class EmploersForm : Form
+    {
+        public string empName, townId, ID;
+        public EmploersForm()
+        {
+            InitializeComponent();
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter townsDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.towns", conn);
+                DataTable townsDATA = new DataTable();
+                townsDA.Fill(townsDATA);
+                Townscombo.DataSource = townsDATA;
+                Townscombo.DisplayMember = "NameTown";
+                Townscombo.ValueMember = "IdT";
+                Townscombo.SelectedIndex = -1;
+                MySqlDataAdapter empDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.employers", conn);
+                DataTable empDATA = new DataTable();
+                empDA.Fill(empDATA);
+                EmployerscomboBox.DataSource = empDATA;
+                EmployerscomboBox.DisplayMember = "NameEmployer";
+                EmployerscomboBox.ValueMember = "IdE";
+                EmployerscomboBox.SelectedIndex = -1;
+                MySqlDataAdapter vacDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.vacancy", conn);
+                DataTable vacDATA = new DataTable();
+                vacDA.Fill(vacDATA);
+                VacancycomboBox.DataSource = vacDATA;
+                VacancycomboBox.DisplayMember = "NameVacancy";
+                VacancycomboBox.ValueMember = "IdV";
+                VacancycomboBox.SelectedIndex = -1;
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void FillEmployers()
+        {
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter SDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.employersview", conn);
+                DataTable DATA = new DataTable();
+                SDA.Fill(DATA);
+                dataGridViewEmployers.DataSource = DATA;
+                dataGridViewEmployers.Columns[0].HeaderText = "Город";
+                dataGridViewEmployers.Columns[1].HeaderText = "Организация";
+                dataGridViewEmployers.Columns[2].HeaderText = "Директор";
+                dataGridViewEmployers.Columns[3].HeaderText = "Адрес";
+                dataGridViewEmployers.Columns[4].HeaderText = "Телефонный номер";
+                dataGridViewEmployers.Columns[5].HeaderText = "Время собеседования от";
+                dataGridViewEmployers.Columns[6].HeaderText = "Время собеседования до";
+                dataGridViewEmployers.Columns[0].Width = 90;
+                dataGridViewEmployers.Columns[1].Width = 160;
+                dataGridViewEmployers.Columns[2].Width = 76;
+                dataGridViewEmployers.Columns[3].Width = 120;
+                dataGridViewEmployers.Columns[4].Width = 90;
+                dataGridViewEmployers.Columns[5].Width = 90;
+                dataGridViewEmployers.Columns[6].Width = 90;
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void FillListVacancy()
+        {
+            // Создаем и открываем соединение с MySQL
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter SDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.listvacancyforadd", conn);
+                DataTable DATA = new DataTable();
+                SDA.Fill(DATA);
+                dataGridViewListVacancy.DataSource = DATA;
+                dataGridViewListVacancy.Columns[1].HeaderText = "Вакансия";
+                dataGridViewListVacancy.Columns[2].HeaderText = "Город";
+                dataGridViewListVacancy.Columns[3].HeaderText = "Организация";
+                dataGridViewListVacancy.Columns[4].HeaderText = "Стартовый оклад";
+                dataGridViewListVacancy.Columns[5].HeaderText = "Статус";
+                dataGridViewListVacancy.Columns[0].Width = 0;
+                dataGridViewListVacancy.Columns[1].Width = 220;
+                dataGridViewListVacancy.Columns[2].Width = 100;
+                dataGridViewListVacancy.Columns[3].Width = 220;
+                dataGridViewListVacancy.Columns[4].Width = 80;
+                dataGridViewListVacancy.Columns[5].Width = 80;
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+
+        private void FillTowns()
+        {
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter townsDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.townsview", conn);
+                DataTable townsDATA = new DataTable();
+                townsDA.Fill(townsDATA);
+                dataGridViewTowns.DataSource = townsDATA;
+                dataGridViewTowns.Columns[1].HeaderText = "Город";
+                dataGridViewTowns.Columns[2].HeaderText = "Телефонный код";
+                dataGridViewTowns.Columns[0].Width = 0;
+                dataGridViewTowns.Columns[1].Width = 160;
+                dataGridViewTowns.Columns[2].Width = 180;
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void FillVacancy()
+        {
+            string @strConn = "";
+            using (StreamReader sr = new StreamReader("BDConnect.ini"))
+            {
+                while (sr.Peek() >= 0)
+                {
+                    strConn = @sr.ReadLine();
+                }
+            }
+            MySqlConnection conn = new MySqlConnection(@strConn);
+            try
+            {
+                conn.Open();
+                MySqlDataAdapter vacaDA = new MySqlDataAdapter("SELECT * FROM phoneoflaborexchange.vacancyview", conn);
+                DataTable vacaDATA = new DataTable();
+                vacaDA.Fill(vacaDATA);
+                dataGridViewVacancy.DataSource = vacaDATA;
+                dataGridViewVacancy.Columns[1].HeaderText = "Название вакансии";
+                dataGridViewVacancy.Columns[1].Width = 280;
+                dataGridViewVacancy.Columns[0].Width = 0;
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+        private void EmploersForm_Load(object sender, EventArgs e)
+        {
+            AddTownbtn.Enabled = false;
+            EditTownbtn.Enabled = false;
+            DelTownbtn.Enabled = false;
+            SaveTownbtn.Enabled = false;
+            Form1 main = this.Owner as Form1;
+            if (main != null)
+            {
+                if (main.EditOn == 1)
+                {
+                    tabControlEmployers.SelectedTab = tabPageEmployers;
+                }
+                else
+                {
+                    if (main.EditOn == 2)
+                    {
+                        tabControlEmployers.SelectedTab = tabPageVacancy;
+                    }
+                    else
+                    {
+                        if (main.EditOn == 3)
+                        {
+                            tabControlEmployers.SelectedTab = tabPageTowns;
+                        }
+                        else
+                        {
+                            tabControlEmployers.SelectedTab = tabPageNameVacancy;
+                        }
+                    }
+                }
+                if (main.UserMode != 0)
+                {
+                    AddTownbtn.Enabled = false;
+                    EditTownbtn.Enabled = false;
+                    DelTownbtn.Enabled = false;
+                    SaveTownbtn.Enabled = false;
+                    AddVacancybtn.Enabled = false;
+                    EditVacancybtn.Enabled = false;
+                    DelVacancybtn.Enabled = false;
+                    SaveVacancybtn.Enabled = false;
+                }
+            }
+            FillEmployers();
+            Townscombo.SelectedIndex = -1;
+            EmployerscomboBox.SelectedIndex = -1;
+            StatuscomboBox.SelectedIndex = -1;
+            VacancycomboBox.SelectedIndex = -1;
+            FillListVacancy();
+            FillVacancy();
+            FillTowns();
+        }
+
+        private void Closebtn_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void tabControlEmployers_Selecting(object sender, TabControlCancelEventArgs e)
+        {
+            Form1 main = this.Owner as Form1;
+            if (main != null)
+            {
+                if (main.UserMode == 0)
+                {
+                    AddTownbtn.Enabled = true;
+                    EditTownbtn.Enabled = true;
+                    DelTownbtn.Enabled = true;
+                    SaveTownbtn.Enabled = true;
+                }
+                else
+                {
+                    AddTownbtn.Enabled = false;
+                    EditTownbtn.Enabled = false;
+                    DelTownbtn.Enabled = false;
+                    SaveTownbtn.Enabled = false;
+                }
+            }
+            if (tabControlEmployers.SelectedTab.Name == "tabPageEmployers")
+            {
+                FillEmployers();
+
+            }
+            if (tabControlEmployers.SelectedTab.Name == "tabPageEmployers")
+            {
+                FillListVacancy();
+            }
+            if (tabControlEmployers.SelectedTab.Name == "tabPageTowns")
+            {
+                FillTowns();
+            }
+            if (tabControlEmployers.SelectedTab.Name == "tabPageVacancy")
+            {
+                FillVacancy();
+            }
+        }
+
+        private void AddEmployerbtn_Click(object sender, EventArgs e)
+        {
+            if (Townscombo.SelectedIndex != -1 && textBoxNameEmployer.Text != "" && textBoxAdress.Text != "" && textBoxDirector.Text != "" && textBoxPhone.Text.Length == 7 && maskedTextBoxBeginTime.Text != "  :" && maskedTextBoxEndTime.Text != "  :")
+            {
+                MessageBox.Show("Всё заполнено");
+                string SQLStr = "INSERT INTO phoneoflaborexchange.employers (NameEmployer,IdT, Adress,Director,Phone,BeginTime,EndTime) VALUES (";
+                SQLStr = SQLStr + "'" + textBoxNameEmployer.Text + "', ";
+                SQLStr = SQLStr + "'" + Convert.ToInt32(Townscombo.SelectedValue) + "', ";
+                SQLStr = SQLStr + "'" + textBoxAdress.Text + "', ";
+                SQLStr = SQLStr + "'" + textBoxDirector.Text + "', ";
+                SQLStr = SQLStr + "'" + textBoxPhone.Text + "', ";
+                SQLStr = SQLStr + "'" + Convert.ToDateTime(maskedTextBoxBeginTime.Text).ToString("HH:mm:ss") + "', ";
+                SQLStr = SQLStr + "'" + Convert.ToDateTime(maskedTextBoxEndTime.Text).ToString("HH:mm:ss") + "')";
+                //MessageBox.Show(SQLStr);
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MySqlCommand cmnd = new MySqlCommand(SQLStr, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillEmployers();
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Должны быть заполнены все поля!");
+            }
+        }
+
+        private void EditEmployerbtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewEmployers.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewEmployers.CurrentRow.Index >= 0)
+            {
+                Townscombo.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[0].Value.ToString();
+                townId = Convert.ToString(Convert.ToInt32(Townscombo.SelectedValue));
+                textBoxNameEmployer.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[1].Value.ToString();
+                empName = textBoxNameEmployer.Text;
+                textBoxAdress.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[3].Value.ToString();
+                textBoxDirector.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[2].Value.ToString();
+                textBoxPhone.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[4].Value.ToString();
+                textBoxPhone.Text = textBoxPhone.Text.Substring(textBoxPhone.Text.Length - 7, 7);
+                maskedTextBoxBeginTime.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[5].Value.ToString();
+                maskedTextBoxEndTime.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[6].Value.ToString();
+            }
+        }
+        private void dataGridViewEmployers_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewEmployers.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewEmployers.CurrentRow.Index >= 0)
+            {
+                Townscombo.Text = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[0].Value.ToString();
+                townId = Convert.ToString(Convert.ToInt32(Townscombo.SelectedValue));
+                empName = dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[1].Value.ToString();
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    // выполнить SQL-команду
+                    string sIDSql = "Select IdE From Employers WHERE NameEmployer = '" + empName + "' AND IdT = '" + townId + "'";
+                    sIDSql += " AND Adress = '" + dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[3].Value.ToString();
+                    string txt= dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[4].Value.ToString();
+                    sIDSql += "' AND Phone = '" + txt.Substring(txt.Length - 7, 7);
+                    sIDSql += "' AND Director = '" + dataGridViewEmployers.Rows[dataGridViewEmployers.CurrentRow.Index].Cells[2].Value.ToString() + "'";
+                    // Создаем команду ...
+                    MySqlCommand cmdID = new MySqlCommand(sIDSql, conn);
+                    // Выполняем команду  ..
+                    int empID = Convert.ToInt32(cmdID.ExecuteScalar());
+                    ID = empID.ToString();
+                    conn.Close();
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+        }
+
+        private void AddVacInListbtn_Click(object sender, EventArgs e)
+        {
+            if (VacancycomboBox.SelectedIndex != -1 && EmployerscomboBox.SelectedIndex != -1 && SalarytextBox.Text != "" && StatuscomboBox.SelectedIndex != -1)
+            {
+                string SQLStr = "INSERT INTO phoneoflaborexchange.listvacancy (IdV, IdE,StartSalary,Status) VALUES (";
+                SQLStr = SQLStr + "'" + Convert.ToInt32(VacancycomboBox.SelectedValue).ToString() + "', ";
+                SQLStr = SQLStr + "'" + Convert.ToInt32(EmployerscomboBox.SelectedValue).ToString() + "', ";
+                SQLStr = SQLStr + "'" + SalarytextBox.Text + "', ";
+                SQLStr = SQLStr + "'" + StatuscomboBox.SelectedIndex.ToString() + "')";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MySqlCommand cmnd = new MySqlCommand(SQLStr, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillListVacancy();
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Должны быть заполнены все поля!");
+            }
+        }
+
+        private void dataGridViewListVacancy_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewListVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewListVacancy.CurrentRow.Index >= 0)
+            {
+                ID = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[0].Value.ToString();
+            }
+        }
+
+        private void EditVacInListbtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewListVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewListVacancy.CurrentRow.Index >= 0)
+            {
+                VacancycomboBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[1].Value.ToString();
+                EmployerscomboBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[2].Value.ToString();
+                EmployerscomboBox.SelectedIndex = (int) dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[2].Value;
+                SalarytextBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[4].Value.ToString();
+                StatuscomboBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[5].Value.ToString();
+            }
+        }
+
+        private void SaveVacInListbtn_Click(object sender, EventArgs e)
+        {
+            //MessageBox.Show(Convert.ToString(Convert.ToInt32(VacancycomboBox.SelectedValue)) + ", "+ Convert.ToString(Convert.ToInt32(EmployerscomboBox.SelectedValue)) + ", "+ SalarytextBox.Text+ ", "+StatuscomboBox.SelectedIndex.ToString());
+            string SqlText = "UPDATE listvacancy SET ";
+            if (VacancycomboBox.SelectedIndex > -1 && EmployerscomboBox.SelectedIndex > -1 && SalarytextBox.Text.Trim() != "" && StatuscomboBox.SelectedIndex>-1)
+            {
+                SqlText += "IdV = '" + Convert.ToString(Convert.ToInt32(VacancycomboBox.SelectedValue)) + "'";
+                SqlText += "IdE = '" + Convert.ToString(Convert.ToInt32(EmployerscomboBox.SelectedValue)) + "'";
+                SqlText += ", StartSalary = '" + SalarytextBox.Text.Trim() + "'";
+                SqlText += ", Status = '" + StatuscomboBox.SelectedIndex.ToString() + "'";
+                SqlText += " WHERE listvacancy.IdV = '" + ID + "'";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MessageBox.Show(SqlText);
+                    MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillListVacancy();
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+                // отобразить таблицу ListVacancy
+                FillEmployers();
+                Townscombo.SelectedIndex = -1;
+                textBoxNameEmployer.Text = "";
+                textBoxAdress.Text = "";
+                textBoxDirector.Text = "";
+                textBoxPhone.Text = "";
+                maskedTextBoxBeginTime.Text = "";
+                maskedTextBoxEndTime.Text = "";
+            }
+            else MessageBox.Show("Нельзя сохранить незаполненную строку!");
+        }
+        private void EditVacInListbtn_Click_1(object sender, EventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewListVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewListVacancy.CurrentRow.Index >= 0)
+            {
+                VacancycomboBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[1].Value.ToString();
+                EmployerscomboBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[3].Value.ToString();
+                SalarytextBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[4].Value.ToString();
+                StatuscomboBox.Text = dataGridViewListVacancy.Rows[dataGridViewListVacancy.CurrentRow.Index].Cells[5].Value.ToString();
+            }
+        }
+
+        private void DelVacInListbtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            string SqlText = "DELETE FROM ListVacancy WHERE ListVacancy.IdV = ";
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewListVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewListVacancy.CurrentRow.Index >= 0)
+                if (MessageBox.Show("Вы действительно хотите удалить запись? Это действие нельзя будет отменить", "Удаление записи", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    string @strConn = "";
+                    using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                    {
+                        while (sr.Peek() >= 0)
+                        {
+                            strConn = @sr.ReadLine();
+                        }
+                    }
+                    MySqlConnection conn = new MySqlConnection(@strConn);
+                    try
+                    {
+                        SqlText += ID;
+                        conn.Open();
+                        MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                        cmnd.ExecuteNonQuery();
+                        conn.Close();
+                        FillListVacancy();
+                    }
+                    catch (Exception ex)
+                    {
+
+                        MessageBox.Show(ex.Message);
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+        }
+
+        private void AddTownbtn_Click(object sender, EventArgs e)
+        {
+            if (textBoxNameTown.Text != "" && textBoxPhoneCode.Text !="")
+            {
+                string SQLStr = "INSERT INTO phoneoflaborexchange.towns (NameTown, PhoneCod) VALUES (";
+                SQLStr = SQLStr + "'" + textBoxNameTown.Text + "', ";
+                SQLStr = SQLStr + "'" + textBoxPhoneCode.Text + "')";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MySqlCommand cmnd = new MySqlCommand(SQLStr, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillTowns();
+                    textBoxNameTown.Text = "";
+                    textBoxPhoneCode.Text = "";
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Должны быть заполнены все поля!");
+            }
+        }
+
+        private void EditTownbtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewTowns.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewTowns.CurrentRow.Index >= 0)
+            {
+                textBoxNameTown.Text = dataGridViewTowns.Rows[dataGridViewTowns.CurrentRow.Index].Cells[1].Value.ToString();
+                textBoxPhoneCode.Text = dataGridViewTowns.Rows[dataGridViewTowns.CurrentRow.Index].Cells[2].Value.ToString();
+            }
+        }
+
+        private void dataGridViewTowns_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewTowns.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewTowns.CurrentRow.Index >= 0)
+            {
+                ID = dataGridViewTowns.Rows[dataGridViewTowns.CurrentRow.Index].Cells[0].Value.ToString();
+            }
+        }
+
+        private void SaveTownbtn_Click(object sender, EventArgs e)
+        {
+            string SqlText = "UPDATE towns SET ";
+            if (textBoxNameTown.Text.Trim() != "" && textBoxPhoneCode.Text.Trim() != "")
+            {
+                SqlText += " NameTown = '" + textBoxNameTown.Text.Trim() + "'";
+                SqlText += ", PhoneCod = '" + textBoxPhoneCode.Text.Trim() + "'";
+                SqlText += " WHERE towns.IdT = '" + ID + "'";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MessageBox.Show(SqlText);
+                    MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillTowns();
+                    textBoxNameTown.Text = "";
+                    textBoxPhoneCode.Text = "";
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+                // отобразить таблицу ListVacancy
+                FillTowns();
+                textBoxNameTown.Text = "";
+                textBoxPhoneCode.Text = "";
+            }
+            else MessageBox.Show("Нельзя сохранить незаполненную строку!");
+        }
+
+        private void DelTownbtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            string SqlText = "DELETE FROM towns WHERE towns.IdT = ";
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewTowns.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewTowns.CurrentRow.Index >= 0)
+                if (MessageBox.Show("Вы действительно хотите удалить запись? Это действие нельзя будет отменить", "Удаление записи", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    string @strConn = "";
+                    using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                    {
+                        while (sr.Peek() >= 0)
+                        {
+                            strConn = @sr.ReadLine();
+                        }
+                    }
+                    MySqlConnection conn = new MySqlConnection(@strConn);
+                    try
+                    {
+                        SqlText += ID;
+                        conn.Open();
+                        MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                        cmnd.ExecuteNonQuery();
+                        conn.Close();
+                        FillTowns();
+                    }
+                    catch (Exception ex)
+                    {
+
+                        MessageBox.Show(ex.Message);
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+        }
+
+        private void AddVacancybtn_Click(object sender, EventArgs e)
+        {
+            if (textBoxNameVacancy.Text != "")
+            {
+                string SQLStr = "INSERT INTO phoneoflaborexchange.vacancy (NameVacancy) VALUES (";
+                SQLStr = SQLStr + "'" + textBoxNameVacancy.Text + "')";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MySqlCommand cmnd = new MySqlCommand(SQLStr, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillVacancy();
+                    textBoxNameVacancy.Text = "";
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Должны быть заполнены все поля!");
+            }
+        }
+
+        private void EditVacancybtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewVacancy.CurrentRow.Index >= 0)
+            {
+                textBoxNameVacancy.Text = dataGridViewVacancy.Rows[dataGridViewVacancy.CurrentRow.Index].Cells[1].Value.ToString();
+            }
+        }
+
+        private void dataGridViewVacancy_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            int n;
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewVacancy.CurrentRow.Index >= 0)
+            {
+                ID = dataGridViewVacancy.Rows[dataGridViewVacancy.CurrentRow.Index].Cells[0].Value.ToString();
+            }
+        }
+
+        private void SaveVacancybtn_Click(object sender, EventArgs e)
+        {
+            string SqlText = "UPDATE vacancy SET ";
+            if (textBoxNameVacancy.Text.Trim() != "")
+            {
+                SqlText += " NameTown = '" + textBoxNameVacancy.Text.Trim() + "'";
+                SqlText += " WHERE vacancy.IdV = '" + ID + "'";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();
+                    MessageBox.Show(SqlText);
+                    MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillVacancy();
+                    textBoxNameVacancy.Text = "";
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+            }
+            else MessageBox.Show("Нельзя сохранить незаполненную строку!");
+        }
+
+        private void DelVacancybtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            string SqlText = "DELETE FROM vacancy WHERE vacancy.IdV = ";
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewVacancy.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewVacancy.CurrentRow.Index >= 0)
+                if (MessageBox.Show("Вы действительно хотите удалить запись? Это действие нельзя будет отменить", "Удаление записи", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    string @strConn = "";
+                    using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                    {
+                        while (sr.Peek() >= 0)
+                        {
+                            strConn = @sr.ReadLine();
+                        }
+                    }
+                    MySqlConnection conn = new MySqlConnection(@strConn);
+                    try
+                    {
+                        SqlText += ID;
+                        conn.Open();
+                        MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                        cmnd.ExecuteNonQuery();
+                        conn.Close();
+                        FillVacancy();
+                    }
+                    catch (Exception ex)
+                    {
+
+                        MessageBox.Show(ex.Message);
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+        }
+
+        private void SaveEmployerbtn_Click(object sender, EventArgs e)
+        {
+            //MessageBox.Show(Convert.ToString(Convert.ToInt32(Townscombo.SelectedValue)) + ", " + textBoxNameEmployer.Text.Trim() + ", " + textBoxAdress.Text.Trim() + ", " + textBoxDirector.Text.Trim() + ", " + textBoxPhone.Text + ", " + maskedTextBoxBeginTime.Text.Trim() + ", " + maskedTextBoxEndTime.Text.Trim());
+            string SqlText = "UPDATE Employers SET ";
+            if (Townscombo.SelectedIndex > -1 && textBoxNameEmployer.Text.Trim() != "" && textBoxAdress.Text.Trim() != "" && textBoxDirector.Text.Trim() != "" && textBoxPhone.Text.Length == 7 && maskedTextBoxBeginTime.Text.Trim() != ":" && maskedTextBoxEndTime.Text.Trim() != ":")
+            {
+                SqlText += "IdT = '" + Convert.ToString(Convert.ToInt32(Townscombo.SelectedValue)) + "'";
+                SqlText += ", NameEmployer = '" + textBoxNameEmployer.Text.Trim() + "'";
+                SqlText += ", Adress = '" + textBoxAdress.Text.Trim() + "'";
+                SqlText += ", Director='" + textBoxDirector.Text.Trim() + "'";
+                SqlText += ", Phone = '" + textBoxPhone.Text + "'";
+                SqlText += ", BeginTime = '" + maskedTextBoxBeginTime.Text + "'";
+                SqlText += ", EndTime = '" + maskedTextBoxEndTime.Text + "'";
+                SqlText += " WHERE Employers.IdE = '" + ID + "'";
+                string @strConn = "";
+                using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                {
+                    while (sr.Peek() >= 0)
+                    {
+                        strConn = @sr.ReadLine();
+                    }
+                }
+                MySqlConnection conn = new MySqlConnection(@strConn);
+                try
+                {
+                    conn.Open();                 
+                    MessageBox.Show(SqlText);
+                    MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                    cmnd.ExecuteNonQuery();
+                    conn.Close();
+                    FillEmployers();
+                }
+                catch (Exception ex)
+                {
+
+                    MessageBox.Show(ex.Message);
+                }
+                finally
+                {
+                    conn.Close();
+                }
+                // отобразить таблицу Employers
+                FillEmployers();
+                Townscombo.SelectedIndex = -1;
+                textBoxNameEmployer.Text = "";
+                textBoxAdress.Text = "";
+                textBoxDirector.Text = "";
+                textBoxPhone.Text = "";
+                maskedTextBoxBeginTime.Text = "";
+                maskedTextBoxEndTime.Text = ""; 
+            }
+            else MessageBox.Show("Нельзя сохранить незаполненную строку!");
+        }
+
+        private void DelEmployerbtn_Click(object sender, EventArgs e)
+        {
+            int n;
+            string SqlText = "DELETE FROM Employers WHERE Employers.IdE = ";
+            // проверка, есть ли вообще записи в таблице
+            n = dataGridViewEmployers.Rows.Count;
+            if (n == 1) return;
+            if (dataGridViewEmployers.CurrentRow.Index >= 0)
+                if (MessageBox.Show("Вы действительно хотите удалить запись? Это действие нельзя будет отменить", "Удаление записи", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    string @strConn = "";
+                    using (StreamReader sr = new StreamReader("BDConnect.ini"))
+                    {
+                        while (sr.Peek() >= 0)
+                        {
+                            strConn = @sr.ReadLine();
+                        }
+                    }
+                    MySqlConnection conn = new MySqlConnection(@strConn);
+                    try
+                    {
+                        SqlText += ID;
+                        conn.Open();
+                        MySqlCommand cmnd = new MySqlCommand(SqlText, conn);
+                        cmnd.ExecuteNonQuery();
+                        conn.Close();
+                        FillEmployers();
+                    }
+                    catch (Exception ex)
+                    {
+
+                        MessageBox.Show(ex.Message);
+                    }
+                    finally
+                    {
+                        conn.Close();
+                    }
+                }
+        }
+    }
+}
